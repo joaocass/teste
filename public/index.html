@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mapa Eleitoral">
+<meta name="description" content="Painel independente que consolida pesquisas eleitorais por estado, com médias ponderadas, projeções e probabilidade de vitória.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%233c4043'/%3E%3Cpath d='m7 12.5 3.2 3.2L17 8.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Mapa Eleitoral do Brasil — Painel de Pesquisas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="loading">
+<svg class="icon-sprite" aria-hidden="true" focusable="false">
+<defs>
+  <symbol id="i-ballot" viewBox="0 0 24 24"><path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z"/><path d="M4 8 12 3l8 5"/><path d="m8.5 12.2 2.4 2.3L15.7 10" /></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4.5 3 6.7v13L9 17l6 2.3 6-2.2V4.1l-6 2.2-6-2.2Z"/><path d="M9 4.5v12.8M15 6.3v13"/></symbol>
+  <symbol id="i-regions" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.4"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.4"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.4"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.4"/></symbol>
+  <symbol id="i-rank" viewBox="0 0 24 24"><rect x="4" y="13" width="3.6" height="7" rx="0.6"/><rect x="10.2" y="7" width="3.6" height="13" rx="0.6"/><rect x="16.4" y="10.3" width="3.6" height="9.7" rx="0.6"/></symbol>
+  <symbol id="i-timeline" viewBox="0 0 24 24"><path d="M3 17.5 8.2 12l3.8 3 7-9"/><circle cx="19" cy="6" r="1.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-institute" viewBox="0 0 24 24"><path d="M4 21h16M5 21V10.5l7-4.7 7 4.7V21M9.5 21v-6h5v6"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-4.2 2.8L9 15l4.2-2.8Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.3v5l3.4 2"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2.3 21 6.3l-4 4"/><path d="M3 12.3v-2a4 4 0 0 1 4-4h14"/><path d="M7 21.7 3 17.7l4-4"/><path d="M21 11.7v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-divergence" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="m8 7.5 4-4 4 4"/><path d="m8 16.5 4 4 4-4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7.5 18.5l-4 1 1-4Z"/></symbol>
+  <symbol id="i-remove" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="m4.5 12.5 5 5 10-10"/></symbol>
+  <symbol id="i-trend-up" viewBox="0 0 24 24"><path d="M12 5.5 19 18H5Z"/></symbol>
+  <symbol id="i-trend-down" viewBox="0 0 24 24"><path d="M12 18.5 5 6h14Z"/></symbol>
+  <symbol id="i-trend-flat" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4"/></symbol>
+  <symbol id="i-signal" viewBox="0 0 24 24"><rect x="3" y="14" width="4" height="7" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12.2M7.2 10.6 12 15.4l4.8-4.8"/><path d="M4 18.5v1.5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5"/></symbol>
+  <symbol id="i-scatter" viewBox="0 0 24 24"><path d="M4 4v16h16"/><circle cx="8.5" cy="15" r="1.4" fill="currentColor" stroke="none"/><circle cx="13" cy="10.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="17.5" cy="13" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="7" r="1.4" fill="currentColor" stroke="none"/><circle cx="10.5" cy="17.5" r="1.4" fill="currentColor" stroke="none"/></symbol>
+</defs>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+</svg>
+
+<header class="appbar">
+  <span class="crest"><svg class="icon" aria-hidden="true"><use href="#i-ballot"></use></svg></span>
+  <h1><span class="titleblock"><span class="t1">Mapa Eleitoral do Brasil</span><span class="t2">Consolidação de pesquisas por UF — Lula × Flávio Bolsonaro</span></span></h1>
+  <button id="lockBtn" type="button" class="ghostbtn" hidden title="Encerrar sessão de edição"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg><span>Sair</span></button>
+  <span id="syncBadge"><span class="dot"></span><span id="syncLabel">Conectando ao MongoDB…</span></span>
+</header>
+
+<div class="page">
+  <nav id="tabs">
+    <button class="active" data-tab="map"><svg class="icon" aria-hidden="true"><use href="#i-map"></use></svg><span>Mapa</span></button><button data-tab="region"><svg class="icon" aria-hidden="true"><use href="#i-regions"></use></svg><span>Regiões</span></button><button data-tab="rank"><svg class="icon" aria-hidden="true"><use href="#i-rank"></use></svg><span>Ranking</span></button><button data-tab="time"><svg class="icon" aria-hidden="true"><use href="#i-timeline"></use></svg><span>Evolução</span></button><button data-tab="prob"><svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg><span><span class="l-full">Probabilidades</span><span class="l-short">Chances</span></span></button><button data-tab="inst"><svg class="icon" aria-hidden="true"><use href="#i-institute"></use></svg><span>Institutos</span></button>
+  </nav>
+  <div class="content">
+
+  <section class="herocard">
+    <div id="stats">
+      <div class="stat"><div class="k">Estados com pesquisa</div><div class="v" id="statCoverage">0 / 27</div></div>
+      <div class="stat"><div class="k">Total de pesquisas</div><div class="v" id="statPolls">0</div></div>
+      <div class="stat"><div class="k">Última atualização</div><div class="v" id="statLast">—</div></div>
+      <div class="stat"><div class="k">Dias até a eleição (25/10)</div><div class="v" id="statCountdown">—</div></div>
+      <div class="stat"><div class="k">Peso eleitoral coberto</div><div class="v" id="statCoverW">0%</div></div>
+    </div>
+    <div id="bar-wrap"><div id="bar"><div class="seg lula" id="seg-lula"></div><div class="seg opp" id="seg-opp"></div></div><div id="lead"></div><div id="leadProb"></div></div>
+  </section>
+
+  <details id="controlsBox" open>
+  <summary><svg class="icon" aria-hidden="true"><use href="#i-compass"></use></svg>Ajustes de cálculo e cenário</summary>
+  <section id="controls">
+    <div class="ctrl-group"><span class="ctrl-label">Cálculo da média</span><div class="segbtns">
+      <label><input type="radio" name="method" value="ponderada" checked><span>Cred. + recência</span></label>
+      <label><input type="radio" name="method" value="ajustada"><span>+ efeito de casa</span></label>
+      <label><input type="radio" name="method" value="simples"><span>Simples</span></label></div></div>
+    <div class="ctrl-group"><span class="ctrl-label">Cenário (margem de erro)</span><div class="segbtns">
+      <label><input type="radio" name="scenario" value="base" checked><span>Média</span></label>
+      <label><input type="radio" name="scenario" value="lula"><span>Margem p/ Lula</span></label>
+      <label><input type="radio" name="scenario" value="flavio"><span>Margem p/ Flávio</span></label></div></div>
+    <div class="ctrl-group"><span class="ctrl-label">Mapa</span><div class="segbtns">
+      <label><input type="radio" name="mapmode" value="atual" checked><span>Intenção de voto</span></label>
+      <label><input type="radio" name="mapmode" value="variacao"><span>Variação vs 2022</span></label></div></div>
+    <button id="copySum" type="button" class="ghostbtn"><svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg> Copiar resumo</button>
+    <button id="exportCsv" type="button" class="ghostbtn"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg> Exportar CSV</button>
+    <button id="reset" type="button"><svg class="icon" aria-hidden="true"><use href="#i-reset"></use></svg> Limpar pesquisas</button>
+  </section>
+  </details>
+
+
+  <main>
+  <div id="mapview" class="view active">
+    <div id="mapbox">
+      <label class="selectfield"><span>Ir direto para um estado</span><select id="ufSelect" aria-label="Escolher estado"></select></label>
+      <div class="card">
+        <div class="chart-toolbar"><span class="chart-toolbar-label">Mapa por Unidade da Federação</span>
+          <button id="dlMap" type="button" class="ghostbtn"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>Baixar PNG</button></div>
+        <div id="mapWrap" class="chart-svg-wrap"><svg id="brmap" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg><div id="mapTip" class="chart-tooltip" hidden></div></div>
+      </div>
+      <div id="legend"></div>
+    </div>
+    <div id="sheetBackdrop" hidden></div>
+    <div id="side">
+      <div id="sheetHandle" aria-hidden="true"><span></span></div><button id="sheetClose" type="button" aria-label="Fechar painel"><svg class="icon" aria-hidden="true"><use href="#i-remove"></use></svg></button>
+      <div id="panel" class="card"><p class="empty">Clique em um estado no mapa para ver e adicionar pesquisas.</p></div>
+      <p class="hint">Dados salvos no MongoDB: todos que acessam este servidor veem as mesmas pesquisas. Pesquisas antigas perdem peso (meia-vida de 120 dias). O selo de confiança considera o número de pesquisas e a concordância entre elas.</p>
+    </div>
+  </div>
+
+  <div id="regionview" class="view">
+    <div class="card"><h2><svg class="icon" aria-hidden="true"><use href="#i-regions"></use></svg>Panorama por região</h2>
+      <p class="section-sub">Médias ponderadas pelo peso eleitoral de 2022, comparadas ao resultado oficial de 2022.</p>
+      <div id="regionList" class="regiongrid"></div></div>
+    <div class="card card-stack"><h2><svg class="icon" aria-hidden="true"><use href="#i-timeline"></use></svg>Destaques de oscilação</h2>
+      <p class="section-sub">Estados com maior variação de Lula em relação a 2022, entre os que têm pesquisa.</p>
+      <div id="regionInsights" class="insightsgrid"></div></div>
+  </div>
+
+  <div id="rankview" class="view">
+    <div class="card"><h2><svg class="icon" aria-hidden="true"><use href="#i-rank"></use></svg>Ranking dos estados por % de Lula</h2>
+      <p class="section-sub">O selo mostra a variação em p.p. frente a 2022. O relógio marca pesquisa desatualizada (mais de 45 dias); "1 pesquisa" marca dado preliminar.</p>
+      <div id="rankList"></div></div>
+    <div class="card card-stack"><h2><svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg>Estados decisivos</h2>
+      <p class="section-sub">Diferença entre Lula e Flávio abaixo de 5 p.p. — corrida apertada, sujeita a virar com novas pesquisas.</p>
+      <div id="decisiveList" class="decisivegrid"></div></div>
+  </div>
+
+  <div id="timeview" class="view">
+    <div class="card">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-timeline"></use></svg>Evolução da média nacional</h2>
+      <p class="section-sub">Recalculada a cada pesquisa com o resultado mais recente de cada estado. A linha é uma regressão local (LOESS); os pontos são os valores reais. Passe o mouse para ver cada data.</p>
+      <div class="chart-toolbar" style="justify-content:flex-end;margin:0 0 4px"><button id="dlTime" type="button" class="ghostbtn"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>Baixar PNG</button></div>
+      <div id="timeSvgWrap" class="chart-svg-wrap"><svg id="timeSvg" viewBox="0 0 800 340" xmlns="http://www.w3.org/2000/svg"></svg><div id="timeTooltip" class="chart-tooltip" hidden></div></div>
+      <div id="leadershipInfo"></div>
+    </div>
+    <div class="card card-stack"><h2><svg class="icon" aria-hidden="true"><use href="#i-compass"></use></svg>Projeção até a eleição</h2><div id="timelineProjections"></div></div>
+    <div class="card card-stack">
+      <div class="chart-toolbar"><div><h2><svg class="icon" aria-hidden="true"><use href="#i-scatter"></use></svg>Correlação: 2022 × 2026</h2>
+        <p class="section-sub" style="margin-bottom:0">Cada ponto é um estado: eixo X = % de Lula em 2022, eixo Y = média atual. Acima da diagonal, Lula avançou; abaixo, recuou. O r de Pearson mede o quanto o padrão de 2022 se repete.</p></div>
+        <button id="dlCorr" type="button" class="ghostbtn"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>Baixar PNG</button></div>
+      <div id="corrStats" class="corrstats"></div>
+      <div id="corrSvgWrap" class="chart-svg-wrap"><svg id="corrSvg" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg"></svg><div id="corrTooltip" class="chart-tooltip" hidden></div></div>
+    </div>
+  </div>
+
+  <div id="probview" class="view">
+    <div class="card">
+      <div class="chart-toolbar"><div><h2><svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg>Probabilidade de vitória (Monte Carlo)</h2>
+        <p class="section-sub" style="margin-bottom:0">10.000 eleições simuladas: média das pesquisas de cada estado + erro nacional (comum a todos), regional e próprio — como em FiveThirtyEight, The Economist e Split Ticket. A chance de vitória é a fração das simulações em que Lula passa de 50%. Estados sem pesquisa partem de 2022 com incerteza alta. Independe do cenário do topo.</p></div>
+        <button id="dlProb" type="button" class="ghostbtn"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>Baixar PNG</button></div>
+      <div id="probStats" class="corrstats"></div>
+      <div class="chart-svg-wrap"><svg id="probSvg" viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </div>
+    <div class="card card-stack"><h2><svg class="icon" aria-hidden="true"><use href="#i-compass"></use></svg>Cenários de margem de erro</h2>
+      <p class="section-sub">Resultado nacional se o erro das pesquisas de todos os estados caísse a favor de um lado, usando a margem prevista de cada estado.</p>
+      <div id="probScenarios" class="projgrid"></div></div>
+    <div class="card card-stack"><h2><svg class="icon" aria-hidden="true"><use href="#i-rank"></use></svg>Estados mais incertos</h2>
+      <p class="section-sub">Chance de Lula vencer nos 8 estados mais disputados das simulações.</p><div id="probStates"></div></div>
+  </div>
+
+  <div id="instview" class="view">
+    <div class="card"><h2><svg class="icon" aria-hidden="true"><use href="#i-institute"></use></svg>Institutos de pesquisa</h2><div id="instituteList"></div></div>
+  </div>
+  </main>
+  <div class="disclaimer"><svg class="icon" aria-hidden="true"><use href="#i-compass"></use></svg><div><b>Aviso:</b> simulação com pesquisas cadastradas manualmente, sem vínculo com o TSE. A referência de 2022 é o resultado oficial do 2º turno (votos válidos, Lula × Bolsonaro). Os números atuais são médias de intenção de voto, não resultado oficial.</div></div>
+  </div>
+</div>
+<footer>Painel independente de acompanhamento eleitoral · dados inseridos manualmente · referência 2022: resultado oficial do 2º turno.</footer>
+
+<div id="pollModalOverlay" class="modal-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head"><h3 id="modalTitle">Adicionar pesquisa</h3>
+      <button id="modalClose" class="modal-close" type="button" aria-label="Fechar"><svg class="icon" aria-hidden="true"><use href="#i-remove"></use></svg></button></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<button id="toTop" type="button" aria-label="Voltar ao topo" hidden><svg class="icon" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>if(window.innerWidth<=720)document.getElementById("controlsBox").open=false;</script>
+<script src="mapPaths.js"></script>
+<script src="geo.js"></script>
+<script src="baseline2022.js"></script>
+<script src="app.js"></script>
+<div id="ptr" aria-hidden="true"><span></span></div>
+</body>
+</html>
