@@ -1,167 +1,52 @@
-# Mapa Eleitoral do Brasil — Node.js + MongoDB
+# Observatório das Pesquisas (2º turno 2026)
 
-Aplicação Node.js/Express que serve um mapa eleitoral interativo (Lula x Flávio)
-e guarda as pesquisas de cada estado no MongoDB.
+Agregador independente de pesquisas. Node.js (sem Express) + MongoDB + HTML/CSS/JS puro. Gráfico SVG próprio com LOESS real (`public/stats.js`).
 
-## ⚠️ Importante sobre a senha do MongoDB (troque-a!)
+## Executar
+1. Tenha Node 18+ e um MongoDB rodando (ex.: `docker run -d -p 27017:27017 mongo:7`).
+2. `npm install`
+3. `npm start` → http://localhost:3000
+Variáveis: `MONGODB_URI`, `MONGODB_DB`, `PORT`, `SITE_NAME` (nome do site), `NO_FILE_FALLBACK=1` (falha se o Mongo estiver fora; sem isso, cai em `data/polls.json` só para desenvolvimento).
+Testes: `npm test` (cálculos, LOESS, API, análises, cenários, Monte Carlo).
 
-A connection string usada aqui foi compartilhada em texto aberto em algum
-momento. **Recomendo fortemente trocar a senha do usuário no MongoDB Atlas**
-(Database Access → Edit user → Edit password) antes de usar isso em produção
-ou de subir este projeto para qualquer lugar público (GitHub, etc).
-O arquivo `.env` já está no `.gitignore` para não ser commitado por engano.
+## Modelo estatístico (resumo; detalhes na aba Metodologia)
+Votos válidos → n efetivo (n/deff por método, amostra <100 lida como milhares) → peso = recência × 1/(erro amostral² + τ²) × 1/√k por instituto → efeito de instituto com encolhimento → média + erro-padrão + índice de Kish → tendência encolhida → **Monte Carlo v2** (1 milhão de simulações: erro da média + erro sistemático t₅ + volatilidade estocástica + deriva amortecida + **choques de campanha**) até a data da eleição (padrão 25/10/2026, em Configurações). No gráfico: seletor **Projeção** (mediana tracejada + faixas 50%/90%).
+Testes usam arquivo temporário (`DATA_FILE`) e não tocam em `data/polls.json`.
+
+## Novas funcionalidades (v1.1)
+- **Histórico** (`#historico`): média diária de Lula e Flávio recalculada dia a dia **só com pesquisas já divulgadas** na data (usa `released`, ou `fieldEnd` se vazio; sem “olhar o futuro”). Filtros de período (7/15/30 dias, tudo, datas livres), exibição Lula/Flávio/diferença, faixa de erro de 95%, comparação com média simples ou pesquisas individuais e tabela de tendências (variação e inclinação em pp/dia ± IC).
+- **Institutos** (`#institutos`): além da tabela original, comparação com nº de pesquisas, período, métodos, amostra, n efetivo, margem, última pesquisa, peso na média, **desvio vs. demais institutos** (leave-one-institute-out, na data de cada pesquisa) e efeito de instituto estimado pelo modelo. Gráficos de desvio ao longo do tempo e pesquisas vs. média. Não há “taxa de acerto”: o 2º turno ainda não ocorreu. Campos não cadastrados aparecem como “—”.
+- **Simulador** (`#simulador`): Monte Carlo com parâmetros editáveis (data, limiar, ajuste manual, erro sistemático, volatilidade, multiplicador/persistência da tendência, nº de simulações), probabilidade de cada candidato superar o limiar de votos válidos, histograma, intervalos 50%/90% dos cenários, **IC 95% de Wilson do sorteio** e tabela de **sensibilidade** às premissas.
+- **Cenários** (`#cenarios`): pesquisas hipotéticas, alteração de resultados e exclusão de pesquisas reais, comparados à base real (média, Δ, probabilidade). **Ficam apenas no `localStorage` do navegador** (exportáveis em JSON); nunca vão ao MongoDB nem aparecem nas outras páginas; pesquisas simuladas recebem `hypothetical: true` e id `sim-…`.
+- **Visual** (`public/theme.css`): design flat e sério (abas com sublinhado, cartões com borda fina, sem sombras nem degradês; referências gerais de portais de notícias e dashboards), roxo sobre branco. **Skeleton screens** enquanto os dados carregam e **layout mobile** com barra de navegação inferior, botão flutuante “Adicionar”, chips roláveis e diálogos em folha inferior. Respeita `prefers-reduced-motion`. Ao editar o CSS, aumente o `?v=` em `index.html` para invalidar o cache.
+- `public/stats.js` ganhou, de forma retrocompatível, as opções `threshold`, `shift`, `trendMult` e `seed` em `simulate` e a função `probCI`. Sem opções, os resultados são idênticos aos da versão anterior.
+
+## Desempenho e detalhes (v1.5)
+- `Stats.simulate` agora é **memoizado** (resultado determinístico por dados + parâmetros) e aceita `fan:false` (só o resultado final, sem guardar caminhos diários). O simulador, a sensibilidade (5.000 sorteios por linha, calculada depois da primeira pintura) e os cenários usam o modo leve; resultados idênticos aos do modo completo (testado).
+- Servidor: ETag/304 e gzip nos arquivos estáticos. Favicon SVG, manifesto (instalável como app), meta tags, link “Ir para o conteúdo”, título por página, rolagem ao topo ao trocar de aba e atalho `/` para buscar.
 
 ## Estrutura
+- `public/analytics.js` série diária, tendência, relatório de institutos, cenários, sensibilidade (puro, testado) · `public/extra.js` interface das novas páginas · `public/theme.css` tema visual
+- `public/stats.js` votos válidos, validação, ponderação, agregação, LOESS (isolado/testado)
+- `lib/store.js` persistência MongoDB (com fallback em arquivo) · `server.js` API REST + estáticos
+- `public/index.html|style.css|app.js` interface · `test/` testes
 
-```
-mapa-eleitoral-brasil/
-├── server.js         # servidor Express + rotas da API + conexão MongoDB
-├── seedData.js        # pesos populacionais usados para popular o banco na 1ª vez
-├── package.json
-├── .env                # variáveis de ambiente (string de conexão) — NÃO versionar
-├── .env.example
-└── public/
-    ├── index.html        # página
-    ├── style.css         # estilo (visual institucional)
-    ├── app.js            # lógica do front-end (fala com a API)
-    ├── mapPaths.js       # geometria SVG dos estados (contornos do mapa)
-    └── baseline2022.js   # resultado oficial de 2022 por estado + regiões (referência para os p.p.)
-```
+## Limitações conhecidas
+- As novas telas **não foram testadas em navegador real** neste ambiente (só a lógica, por testes automatizados e verificação de sintaxe); revise visualmente.
+- Cenários são por navegador (não sincronizam entre dispositivos).
+- A faixa do histórico mostra só o erro amostral combinado; o intervalo de IC 95% do Monte Carlo cobre só o ruído do sorteio, e a incerteza das premissas aparece na sensibilidade.
+- O driver MongoDB **não foi testado contra um Mongo real** (ambiente sem rede); a API foi testada no modo arquivo.
+- Não implementados: exportação PNG, média móvel, desfazer, paginação da tabela, IndexedDB, filtros avançados (margem, amostra, estado, data de divulgação), skeletons, prévia detalhada de importação (há confirmação simples + relatório de erros), testes de interface.
+- Suavização LOESS: grau 1, span fixo por nível (30/55/85%). O intervalo de incerteza aparece na projeção Monte Carlo, não na curva LOESS.
+- Sem autenticação: qualquer um com acesso ao servidor edita os dados.
+- Os dados de demonstração são fictícios e marcados "DEMO".
 
-## Como rodar
-
-1. Instale as dependências:
-   ```bash
-   npm install
-   ```
-2. Confira o arquivo `.env` (já vem preenchido com a string de conexão que
-   você passou). Se quiser usar outro banco/cluster, edite `MONGODB_URI`.
-3. Inicie o servidor:
-   ```bash
-   npm start
-   ```
-4. Abra `http://localhost:3000` no navegador.
-
-Na primeira execução, o servidor cria a coleção `states` no banco
-`mapa_eleitoral` e semeia os 27 estados (com os pesos populacionais) sem
-nenhuma pesquisa cadastrada — é aí que você começa a adicionar os dados reais.
-
-## API
-
-| Método | Rota | Descrição |
-|---|---|---|
-| GET | `/api/states` | Retorna todos os estados com peso e lista de pesquisas |
-| POST | `/api/states/:uf/polls` | Adiciona uma pesquisa `{inst, date, lula, opp, cred}` ao estado `:uf` |
-| DELETE | `/api/states/:uf/polls/:index` | Remove a pesquisa no índice `:index` do estado `:uf` |
-| POST | `/api/reset` | Zera as pesquisas de todos os estados |
-
-## Funcionalidades
-
-- Visual em Material Design 3 (tema claro/escuro automático, navigation bar no celular).
-- Mapa do Brasil com dois modos, alternáveis nos controles do topo:
-  - **Intenção de voto**: colore cada estado pela média atual de Lula.
-  - **Variação vs 2022**: colore cada estado pela variação em pontos percentuais (p.p.) de Lula frente ao resultado oficial de 2022 (verde = avanço, laranja/marrom = recuo).
-- **Comparação com 2022 em cada estado**: o painel lateral mostra o resultado oficial de 2022 (Lula × Bolsonaro pai, votos válidos) lado a lado com a média atual (Lula × Flávio), e a variação em p.p. Os dados de referência de 2022 estão em `public/baseline2022.js`.
-- **Peso por recência das pesquisas**: quanto mais antiga a pesquisa, menor o peso dela na média "ponderada" — o peso cai pela metade a cada 120 dias (meia-vida), com um piso mínimo para não zerar pesquisas antigas por completo. Esse percentual de peso aparece na tabela de pesquisas de cada estado (coluna "Peso rec."). É possível alternar para "Média simples" (sem decaimento) nos controles.
-- Aba **Regiões**: cartões com a média ponderada de cada região (Norte, Nordeste, Centro-Oeste, Sudeste, Sul), comparando o resultado de 2022 com a média atual e a variação em p.p., além de um ranking dos estados com maior avanço/recuo de Lula.
-- Aba **Ranking dos estados**: barras comparando todos os estados, com selo de variação vs 2022 ao lado de cada um.
-- Aba **Linha do tempo**: evolução da média nacional consolidada por data.
-- Dados persistidos no MongoDB — qualquer pessoa acessando o mesmo servidor vê os mesmos dados em tempo real (a cada ação, a página relê a API). Isso não muda: `baseline2022.js` é só referência estática do front-end, nada foi alterado no schema do Mongo, então as 71 pesquisas que você já tem cadastradas continuam funcionando normalmente.
-
-### Sobre a meia-vida de 120 dias
-
-O valor está no topo de `public/app.js`:
-
-```js
-const RECENCY_HALF_LIFE_DAYS = 120;
-const RECENCY_FLOOR = 0.12;
-```
-
-Diminua `RECENCY_HALF_LIFE_DAYS` para pesquisas antigas perderem peso mais rápido, ou aumente para elas durarem mais. `RECENCY_FLOOR` é o peso mínimo que uma pesquisa muito antiga ainda mantém (12% por padrão).
-
-## Precisão estatística — como funciona o agregador (atualização)
-
-O painel usa as mesmas técnicas de agregadores de pesquisa profissionais
-(FiveThirtyEight, RealClearPolitics, Split Ticket), adaptadas aos dados que
-já existem — nenhum campo novo precisou ser cadastrado:
-
-- **Efeito de casa (house effects)**: para cada pesquisa de um instituto num
-  estado, compara-se o resultado dela com a média ponderada das pesquisas de
-  TODOS OS OUTROS institutos no mesmo estado. A diferença média (ponderada
-  por credibilidade × recência) é o viés sistemático do instituto — quanto
-  ele tende a ficar acima/abaixo do consenso. Só é calculável quando 2+
-  institutos pesquisam o mesmo estado. Veja a aba **Institutos**. A opção de
-  cálculo "**+ efeito de casa**" (nos controles do topo) usa essa correção
-  para dar uma média nacional mais precisa, removendo o viés conhecido de
-  cada instituto antes de fazer a média.
-- **Intervalo de confiança / "confiança da amostra"**: como o painel não tem
-  o tamanho amostral de cada pesquisa, a forma estatisticamente honesta de
-  medir incerteza é tratar as pesquisas de um estado como pontos de uma
-  meta-amostra (mesma lógica de meta-análise de efeitos aleatórios):
-  calcula-se o desvio-padrão ponderado das pesquisas em torno da média do
-  estado, e o erro-padrão da média é esse desvio dividido pela raiz do
-  número de pesquisas (`SE = σ / √n`). O IC95% exibido é `± 1,96 × SE`. Com
-  1 pesquisa não há como estimar dispersão, então o selo mostra "dado
-  preliminar" em vez de um número inventado.
-- **Divergência entre institutos**: diferença simples entre a pesquisa mais
-  alta e a mais baixa de Lula no estado (`max − min`).
-- **Tendência simples**: seta ▲▼● comparando a primeira e a última pesquisa
-  cadastrada do estado (independe da regressão usada na projeção nacional).
-- **Selo de dado desatualizado**: quando a pesquisa mais recente do estado
-  tem mais de `STALE_DAYS_THRESHOLD` dias (45 por padrão).
-- **Estados decisivos**: estados com `|Lula − Flávio| < DECISIVE_MARGIN`
-  p.p. (5 por padrão), na aba Ranking.
-- **Métricas fixas no topo**: contagem regressiva até 25/10 e % do peso
-  eleitoral nacional já coberto por pesquisa.
-- **Última alternância de liderança nacional**: data em que a série
-  consolidada nacional cruzou os 50% pela última vez, na aba Linha do tempo.
-
-Todos os limiares (`STALE_DAYS_THRESHOLD`, `DECISIVE_MARGIN`, `Z95`) estão
-no topo de `public/app.js` e podem ser ajustados livremente.
-
-## Atualização: LOESS, cenários de margem de erro e Monte Carlo
-
-- **Linha do tempo com LOESS** (regressão local, tricúbico + iterações robustas). Parâmetros no topo de `public/app.js`: `LOESS_SPAN`, `LOESS_DEGREE`, `LOESS_ROBUST_ITERS`. Os pontos continuam sendo os valores reais.
-- **Cenário de margem de erro** (controle no topo): soma (ou subtrai) de Lula a margem de erro prevista de CADA estado (IC95% entre pesquisas; `FALLBACK_MOE` = 3 p.p. nos estados com 1 pesquisa). Afeta mapa, barra, ranking, regiões, projeções e correlação.
-- **Aba Probabilidades**: simulação de Monte Carlo (10.000 rodadas) com erro nacional, regional e estadual; mostra chance de vitória, intervalo de 90%, histograma e os estados mais incertos. Parâmetros `MC_*` no topo do `app.js`.
-
-## Detalhes finos (última rodada)
-
-Vírgula decimal pt-BR em todo o texto; siglas das UFs no mapa; clique nas linhas do ranking/estados decisivos abre o estado; chance de vitória (Monte Carlo) no resumo; linha "hoje" na evolução; "há N dias" na última atualização; preferências (média/cenário/mapa) e aba na URL lembradas; esqueleto de carregamento; botão "voltar ao topo"; Enter envia o formulário e valida o campo de Lula.
-
-## Segurança (senha de edição)
-
-- Ler o painel é público; **adicionar, editar, remover pesquisas e limpar tudo exigem senha**. A senha é pedida na primeira ação; o token fica só em memória — F5, nova aba ou outro dispositivo pedem de novo.
-- Só o **hash scrypt** (N=2^16, sal de 32 bytes) está no servidor (`admin.hash`, ou a variável `ADMIN_PASSWORD_HASH`). A senha não está no código nem no front-end.
-- Comparação em tempo constante, sessão com token aleatório de 256 bits (no servidor só o SHA-256), expira em 2h sem uso / 12h no máximo, amarrada ao navegador.
-- Anti força bruta: após 5 erros o IP é bloqueado (1, 2, 4… min, até 24h) + limite global de 60 tentativas/hora.
-- Cabeçalhos de segurança (CSP, nosniff, DENY frame, HSTS em HTTPS) e corpo de requisição limitado a 4 KB.
-- **Use HTTPS em produção** (a senha trafega na requisição de login). Atrás de proxy (Render, Railway…), defina `TRUST_PROXY=true`.
-- Trocar a senha: `node tools/set-password.js "nova senha"`. Se hospedar via git, `admin.hash` está no `.gitignore`: copie o conteúdo para a variável `ADMIN_PASSWORD_HASH` no host.
-
-## Mapa
-
-A malha vem do IBGE (`/api/geo`, baixada uma vez pelo servidor e guardada em `data/geo-br-uf.json`). Se não carregar, usa os contornos antigos de `mapPaths.js`. Os rótulos ficam no centro do maior círculo inscrito de cada estado; RN, PB, PE, AL, SE, ES e RJ, quando pequenos, ganham rótulo externo com linha-guia.
-
-## Extras (rodada 3)
-
-- **Sair** (cabeçalho, aparece após o login): encerra a sessão de edição na hora.
-- **Auto-atualização** a cada 60 s e ao voltar para a aba (pausa com modal aberto), para vários aparelhos verem o mesmo dado.
-- **Exportar CSV** de todas as pesquisas (Excel pt-BR, `;` e UTF-8) e **Copiar resumo** pronto para WhatsApp.
-- **Desfazer** ao remover uma pesquisa (8 s).
-- Atalho **/** foca a seleção de estado.
-- **Histórico de alterações** no servidor (coleção `audit`, guarda 90 dias): `GET /api/audit` com sessão de edição ativa.
-
-## Modo app no celular
-
-- Barra inferior com as 6 abas (safe-area de iPhone/Android), mapa na primeira tela, resumo em chips com rolagem lateral.
-- Toque num estado → painel sobe como **gaveta** (arraste para baixo, toque fora ou no X para fechar).
-- **Puxar para atualizar** no topo, vibração leve ao selecionar, campos 16 px (sem zoom no iOS), alvos de toque ≥ 44 px.
-- **Instalável** (PWA): no Chrome/Android "Instalar app"; no iOS Safari "Compartilhar → Adicionar à Tela de Início". Abre em tela cheia, com cache da interface (`sw.js`). Precisa de HTTPS.
-
-## Rodada 5 — correções e detalhes
-
-- Celular: o resumo grande só aparece na aba Mapa (nas outras sobra espaço para o conteúdo); gráficos de evolução, probabilidade e correlação mantêm tamanho legível e rolam na horizontal.
-- Título da aba do navegador muda conforme a seção; toque em "Paraíba" (nome no painel) compartilha/copia o link `?uf=PB`, que já abre o estado.
-- Teclado: ← → navega entre estados com o painel aberto; foco visível em tudo; números tabulares nas tabelas.
-- Aviso de offline/online, estado selecionado destacado no mapa, vibração leve ao trocar de aba.
+## Monte Carlo v2 (até 1 bilhão de cenários e choques de campanha)
+- `public/mc.js` (motor, também roda em Node) e `public/mcworker.js` (Web Workers em paralelo; sem Workers cai para blocos cooperativos). Resultado idêntico com qualquer nº de workers. A página principal mostra uma prévia de 20 mil cenários na hora e refina até o total configurado (100 mil a **1 bilhão**) em segundo plano, com barra de progresso e **prévias parciais ao vivo** a cada ~3 s.
+- **Escala (v1.7)**: os blocos de 25 mil sorteios são somados em fluxo, na ordem do índice, e descartados (memória constante: ~5 MB de heap em 3 mi de sorteios; 1 bi = 40 mil blocos). Usa `núcleos − 1` workers (até 16; antes, no máximo 4). Resultado **idêntico bit a bit** ao da v1.6 para a mesma semente, com 1 ou N workers. `MC.run()` (síncrono) é limitado a 2 mi para nunca congelar a página; acima disso, use `MC.runAsync()`.
+- **Tempo de referência** (~7 µs por sorteio por núcleo): 1 mi ≈ 7 s em 1 núcleo; 100 mi ≈ 12 min em 1 núcleo, ≈ 2 min com 7 workers; 1 bi ≈ 20 min com 7 workers, ≈ 8 min com 15. O erro-padrão da probabilidade cai com √N: ±0,044 pp (1 mi), ±0,014 pp (10 mi), ±0,0044 pp (100 mi), ±0,0014 pp (1 bi).
+- **Choques**: ~100 tipos de acontecimentos (debates péssimo/ruim/bom/muito bom, atos, apoios, escândalos, gafes, economia, justiça, mídia, segurança, mobilização, hecatombes) bons e ruins para os dois lados, com cauda GPD, cascatas de Hawkes, regimes de campanha e dissipação por meia-vida.
+- **Simulador**: perfis (calma/padrão/turbulenta/caótica), frequência, intensidade, exposição por candidato, datas de debates, grupos ligáveis, decomposição da incerteza, hecatombes e caudas, **matriz de debates 5×5**, catálogo filtrável com o efeito de cada choque na probabilidade e sensibilidade.
+- Configurações: nº de simulações (100 mil a 1 milhão), frequência e intensidade dos choques. O padrão da volatilidade diária caiu de 0,12 para 0,08 pp/dia (parte dela agora vem dos choques); configurações antigas salvas no navegador são migradas.
+- Estudo completo, calibração e referências: `docs/ESTUDO_MONTE_CARLO.md`. As frequências e tamanhos são premissas informadas, não estatísticas observadas.
+- Limitação: as telas novas não foram testadas em navegador real aqui (só a lógica, por testes e verificação de sintaxe); revise visualmente. `Stats.simulate` (v1) continua disponível, mas a interface usa `MC`.

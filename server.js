@@ -1,202 +1,61 @@
-require('dotenv').config();
-const express = require('express');
-const path = require('path');
-const { MongoClient } = require('mongodb');
-const fs = require('fs');
-const ORIGINAL = require('./seedData');
-const auth = require('./auth');
-
-const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.DB_NAME || 'mapa_eleitoral';
-
-if (!MONGODB_URI) {
-  console.error('Defina MONGODB_URI no arquivo .env antes de iniciar o servidor.');
-  process.exit(1);
+const http = require('http'), zlib = require('zlib'), fs = require('fs'), path = require('path'), crypto = require('crypto');
+const cfg = require('./config'), store = require('./lib/store'), Stats = require('./public/stats');
+const PUB = path.join(__dirname, 'public');
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon', '.json': 'application/json' };
+const NUM = ['lula', 'flavio', 'blankNull', 'undecided', 'others', 'sample', 'moe', 'confidence'];
+const STR = ['institute', 'surveyId', 'scope', 'state', 'fieldStart', 'fieldEnd', 'released', 'tseDate', 'resultType', 'method', 'population', 'sponsor', 'tseNumber', 'source', 'notes', 'duplicateOf'];
+function clean(b) {
+  const p = {};
+  NUM.forEach((k) => (p[k] = b[k] === '' || b[k] == null ? null : Number(b[k])));
+  STR.forEach((k) => (p[k] = b[k] == null ? '' : String(b[k]).trim().slice(0, 500)));
+  p.scope = p.scope || 'nacional'; p.demo = !!b.demo;
+  return p;
 }
+const dupKey = (p) => [p.institute.toLowerCase(), p.surveyId, p.scope, p.state, p.fieldStart, p.fieldEnd].join('|');
+const send = (res, c, o) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
+const body = (req) => new Promise((ok, no) => { let d = ''; req.on('data', (c) => { d += c; if (d.length > 5e6) req.destroy(); }); req.on('end', () => { try { ok(d ? JSON.parse(d) : {}); } catch (e) { no(e); } }); });
 
-const app = express();
-app.disable('x-powered-by');
-if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : process.env.TRUST_PROXY);
-app.use((req, res, next) => {
-  res.set({
-    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'Referrer-Policy': 'no-referrer',
-    'Cross-Origin-Opener-Policy': 'same-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
-  });
-  if (req.secure) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  if (req.path.startsWith('/api/')) res.set('Cache-Control', 'no-store');
-  next();
-});
-app.use(express.json({ limit: '4kb' }));
-app.use(express.static(path.join(__dirname, 'public'), { setHeaders: (res, p) => { if (/sw\.js$/.test(p)) res.set('Cache-Control', 'no-cache'); if (/manifest\.webmanifest$/.test(p)) res.set('Content-Type', 'application/manifest+json'); } }));
-
-// ---- Malha oficial do IBGE (UFs), baixada uma vez e guardada em disco ----
-const GEO_FILE = path.join(__dirname, 'data', 'geo-br-uf.json');
-let geoCache = null;
-async function loadGeo() {
-  if (geoCache) return geoCache;
-  try { geoCache = fs.readFileSync(GEO_FILE, 'utf8'); return geoCache; } catch (e) {}
-  const base = 'https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo%2Bjson&intrarregiao=UF';
-  for (const q of ['&qualidade=intermediaria', '&qualidade=minima', '']) {
-    try {
-      const r = await fetch(base + q, { signal: AbortSignal.timeout(20000) });
-      if (!r.ok) continue;
-      const txt = await r.text();
-      if (JSON.parse(txt).features.length < 27) continue;
-      fs.mkdirSync(path.dirname(GEO_FILE), { recursive: true });
-      fs.writeFileSync(GEO_FILE, txt);
-      geoCache = txt; return txt;
-    } catch (e) {}
+async function api(req, res, url) {
+  const m = url.pathname.match(/^\/api\/polls(?:\/([\w-]+))?$/);
+  if (url.pathname === '/api/config') return send(res, 200, { siteName: cfg.siteName, storage: store.mode() });
+  if (url.pathname === '/api/polls/import' && req.method === 'POST') {
+    const items = (await body(req)).polls || [], ok = [], errors = [], all = await store.list(), keys = new Set(all.map(dupKey));
+    for (let i = 0; i < items.length; i++) {
+      const p = clean(items[i]), v = Stats.validatePoll(p);
+      if (v.errors.length) { errors.push({ linha: i + 1, erros: v.errors }); continue; }
+      if (keys.has(dupKey(p))) { errors.push({ linha: i + 1, erros: ['Duplicada (já cadastrada).'] }); continue; }
+      p.id = crypto.randomUUID(); keys.add(dupKey(p)); await store.put(p); ok.push(p.id);
+    }
+    return send(res, 200, { imported: ok.length, errors });
   }
-  return null;
-}
-app.get('/api/geo', async (req, res) => {
-  const g = await loadGeo();
-  if (!g) return res.status(503).json({ error: 'Malha indisponível.' });
-  res.set({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=604800' }).send(g);
-});
-
-// ---- Autenticação (necessária só para alterar dados) ----
-app.post('/api/auth/login', auth.login);
-app.post('/api/auth/logout', auth.logout);
-if (!auth.configured) console.warn('ATENÇÃO: admin.hash/ADMIN_PASSWORD_HASH ausente — nenhuma alteração será permitida.');
-
-let statesCol, auditCol;
-function audit(req, res, next) {
-  res.on('finish', () => {
-    if (res.statusCode < 400 && auditCol) auditCol.insertOne({ at: new Date(), action: req.method + ' ' + req.path, ip: req.ip, ua: String(req.headers['user-agent'] || '').slice(0, 160) }).catch(() => {});
-  });
-  next();
-}
-
-async function seedIfEmpty() {
-  const count = await statesCol.countDocuments();
-  if (count === 0) {
-    const docs = Object.entries(ORIGINAL).map(([uf, s]) => ({ _id: uf, weight: s.w, polls: [] }));
-    await statesCol.insertMany(docs);
-    console.log('Seed inicial criado para ' + docs.length + ' estados (sem pesquisas).');
+  if (!m) return send(res, 404, { error: 'Rota inexistente' });
+  const id = m[1];
+  if (req.method === 'GET' && !id) return send(res, 200, await store.list());
+  if (req.method === 'DELETE') { id ? await store.remove(id) : await store.clear(); return send(res, 200, { ok: true }); }
+  if (req.method === 'POST' || req.method === 'PUT') {
+    const raw = await body(req), p = clean(raw), v = Stats.validatePoll(p);
+    if (v.errors.length) return send(res, 400, v);
+    const all = await store.list();
+    p.id = id || crypto.randomUUID();
+    if (!raw.confirmSimilar && all.some((x) => x.id !== p.id && dupKey(x) === dupKey(p)))
+      return send(res, 409, { errors: [], warnings: v.warnings, duplicate: true, message: 'Levantamento semelhante já cadastrado. Confirme se é uma pesquisa diferente.' });
+    await store.put(p);
+    return send(res, 200, { poll: p, warnings: v.warnings });
   }
+  send(res, 405, { error: 'Método não permitido' });
 }
-
-function sanitizePoll(body) {
-  const lula = Number(body.lula);
-  if (Number.isNaN(lula)) return null;
-  const oppRaw = Number(body.opp);
-  return {
-    inst: (body.inst || 'Pesquisa sem nome').toString().slice(0, 120),
-    date: /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : new Date().toISOString().slice(0, 10),
-    lula: Math.max(0, Math.min(100, lula)),
-    opp: Number.isNaN(oppRaw) ? Math.max(0, Math.min(100, 100 - lula)) : Math.max(0, Math.min(100, oppRaw)),
-    cred: Math.max(1, Math.min(5, parseInt(body.cred, 10) || 3))
-  };
-}
-
-async function start() {
-  const client = new MongoClient(MONGODB_URI);
-  await client.connect();
-  const db = client.db(DB_NAME);
-  statesCol = db.collection('states');
-  auditCol = db.collection('audit');
-  auditCol.createIndex({ at: 1 }, { expireAfterSeconds: 90 * 24 * 3600 }).catch(() => {});
-  app.get('/api/audit', auth.requireAuth, async (req, res) => {
-    try { res.json(await auditCol.find({}, { projection: { _id: 0 } }).sort({ at: -1 }).limit(100).toArray()); }
-    catch (e) { res.status(500).json({ error: 'Falha ao ler histórico.' }); }
-  });
-  await seedIfEmpty();
-  console.log('Conectado ao MongoDB (' + DB_NAME + ').');
-
-  // Lista todos os estados com peso e pesquisas
-  app.get('/api/states', async (req, res) => {
-    try {
-      const docs = await statesCol.find({}).toArray();
-      const out = {};
-      docs.forEach(d => { out[d._id] = { weight: d.weight, polls: d.polls || [] }; });
-      res.json(out);
-    } catch (e) {
-      res.status(500).json({ error: 'Falha ao ler dados.' });
-    }
-  });
-
-  // Adiciona uma pesquisa a um estado
-  app.post('/api/states/:uf/polls', auth.requireAuth, audit, async (req, res) => {
-    try {
-      const uf = req.params.uf.toUpperCase();
-      const poll = sanitizePoll(req.body || {});
-      if (!/^[A-Z]{2}$/.test(uf)) return res.status(400).json({ error: 'UF inválida.' });
-      if (!poll) return res.status(400).json({ error: 'Campo "lula" inválido.' });
-      // Nota: no driver oficial do MongoDB (mongodb ^6.x), findOneAndUpdate()
-      // retorna o próprio documento atualizado (ou null), e não mais um
-      // objeto { value }. Usar "result.value" aqui SEMPRE dava undefined,
-      // então o front-end recebia um HTTP 404 e mostrava "Erro ao salvar"
-      // mesmo com o $push já persistido no banco — a pesquisa era salva,
-      // mas o aviso de erro aparecia do mesmo jeito. Corrigido abaixo.
-      const result = await statesCol.findOneAndUpdate(
-        { _id: uf },
-        { $push: { polls: poll } },
-        { returnDocument: 'after' }
-      );
-      if (!result) return res.status(404).json({ error: 'Estado não encontrado.' });
-      res.json(result);
-    } catch (e) {
-      res.status(500).json({ error: 'Falha ao salvar pesquisa.' });
-    }
-  });
-
-  // Edita uma pesquisa existente pelo índice
-  app.put('/api/states/:uf/polls/:index', auth.requireAuth, audit, async (req, res) => {
-    try {
-      const uf = req.params.uf.toUpperCase();
-      const idx = parseInt(req.params.index, 10);
-      const poll = sanitizePoll(req.body || {});
-      if (!/^[A-Z]{2}$/.test(uf)) return res.status(400).json({ error: 'UF inválida.' });
-      if (!poll) return res.status(400).json({ error: 'Campo "lula" inválido.' });
-      const doc = await statesCol.findOne({ _id: uf });
-      if (!doc) return res.status(404).json({ error: 'Estado não encontrado.' });
-      const polls = doc.polls || [];
-      if (idx < 0 || idx >= polls.length) return res.status(400).json({ error: 'Índice inválido.' });
-      polls[idx] = poll;
-      await statesCol.updateOne({ _id: uf }, { $set: { polls } });
-      res.json({ _id: uf, weight: doc.weight, polls });
-    } catch (e) {
-      res.status(500).json({ error: 'Falha ao editar pesquisa.' });
-    }
-  });
-
-  // Remove uma pesquisa pelo índice
-  app.delete('/api/states/:uf/polls/:index', auth.requireAuth, audit, async (req, res) => {
-    try {
-      const uf = req.params.uf.toUpperCase();
-      const idx = parseInt(req.params.index, 10);
-      const doc = await statesCol.findOne({ _id: uf });
-      if (!doc) return res.status(404).json({ error: 'Estado não encontrado.' });
-      const polls = doc.polls || [];
-      if (idx < 0 || idx >= polls.length) return res.status(400).json({ error: 'Índice inválido.' });
-      polls.splice(idx, 1);
-      await statesCol.updateOne({ _id: uf }, { $set: { polls } });
-      res.json({ _id: uf, weight: doc.weight, polls });
-    } catch (e) {
-      res.status(500).json({ error: 'Falha ao remover pesquisa.' });
-    }
-  });
-
-  // Limpa todas as pesquisas de todos os estados
-  app.post('/api/reset', auth.requireAuth, audit, async (req, res) => {
-    try {
-      await statesCol.updateMany({}, { $set: { polls: [] } });
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: 'Falha ao limpar dados.' });
-    }
-  });
-
-  app.listen(PORT, () => console.log('Servidor rodando em http://localhost:' + PORT));
-}
-
-start().catch(err => {
-  console.error('Erro ao iniciar o servidor:', err.message);
-  process.exit(1);
+const server = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, 'http://x');
+    if (url.pathname.startsWith('/api/')) return await api(req, res, url);
+    let f = path.normalize(path.join(PUB, url.pathname === '/' ? 'index.html' : url.pathname));
+    if (!f.startsWith(PUB) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end('Não encontrado'); }
+    const st = fs.statSync(f), et = `W/"${st.size}-${Math.round(st.mtimeMs)}"`, type = MIME[path.extname(f)] || 'application/octet-stream';
+    if (req.headers['if-none-match'] === et) { res.writeHead(304, { ETag: et }); return res.end(); }
+    const hd = { 'Content-Type': type, ETag: et, 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding' };
+    if (/\bgzip\b/.test(req.headers['accept-encoding'] || '') && /^(text\/|image\/svg|application\/(json|manifest))/.test(type)) { hd['Content-Encoding'] = 'gzip'; res.writeHead(200, hd); fs.createReadStream(f).pipe(zlib.createGzip()).pipe(res); }
+    else { res.writeHead(200, hd); fs.createReadStream(f).pipe(res); }
+  } catch (e) { send(res, 500, { error: 'Erro interno: ' + e.message }); }
 });
+module.exports = server;
+if (require.main === module) store.init().then((m) => server.listen(cfg.port, () => console.log(`${cfg.siteName} em http://localhost:${cfg.port} (armazenamento: ${m})`))).catch((e) => { console.error('Falha ao conectar no MongoDB:', e.message); process.exit(1); });
