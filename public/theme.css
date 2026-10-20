@@ -1,0 +1,168 @@
+/* Observatório — tema FLAT e sério.
+   Referências gerais: clareza editorial de portais de notícias (hierarquia tipográfica forte, rótulos de seção)
+   + organização de dashboards do Google/Meta (abas com sublinhado, cartões com borda fina, sem sombras).
+   Identidade própria: roxo sobre branco. Sem logotipos ou interfaces copiadas.
+   Seções: 1 tokens · 2 cabeçalho · 3 superfícies · 4 controles · 5 tabelas · 6 componentes novos · 7 skeleton · 8 mobile · 9 a11y */
+
+/* 1 · Tokens (flat: sem sombras nem degradês) */
+:root{--bg:#f0f2f5;--card:#fff;--bd:#dadde1;--tx:#1c1e21;--mu:#65676b;--ac:#5b4de0;--ac-d:#4637c4;--ac-s:#eeecff;--r:10px;--r-sm:8px;--hov:#f0f2f5;--safe-b:env(safe-area-inset-bottom,0px)}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--tx);-webkit-tap-highlight-color:transparent;font-feature-settings:"tnum" 1,"cv11" 1}
+::selection{background:var(--ac-s)}
+a{color:var(--ac-d)}
+
+/* 2 · Cabeçalho: barra branca de 56px, abas com sublinhado (sem “pílulas”) */
+.top{background:#fff;border:0;border-bottom:1px solid var(--bd);box-shadow:none}
+.bar{min-height:56px;gap:12px;padding:0;flex-wrap:nowrap}
+.logo{gap:10px;font-size:16px;margin-right:6px;white-space:nowrap}
+.logo b{font-weight:800;letter-spacing:-.02em}
+.mark{width:34px;height:34px;border-radius:8px;background:var(--ac);box-shadow:none}
+.top nav{align-self:stretch;flex:1 1 0;min-width:0;display:flex;gap:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;flex-wrap:nowrap}
+.top nav::-webkit-scrollbar{display:none}
+.top nav a{flex:none;display:inline-flex;align-items:center;gap:7px;height:100%;padding:0 12px;border-radius:0;border-bottom:3px solid transparent;color:var(--mu);font-size:14px;font-weight:600;white-space:nowrap;background:transparent;transition:color .15s,background .15s}
+.top nav a .ic{display:none}
+.top nav a:hover{background:var(--hov);color:var(--tx)}
+.top nav a.on{color:var(--ac-d);border-bottom-color:var(--ac);background:transparent}
+/* Busca: ícone que expande ao focar (economiza espaço para as 8 abas) */
+.top .sbox{flex:0 0 auto;width:40px;height:40px;padding:0 10px;margin-left:0;gap:8px;border-radius:20px;background:var(--hov);overflow:hidden;cursor:text;transition:width .2s}
+.top .sbox input{width:0;min-width:0;padding:0;background:transparent;border:0;box-shadow:none;min-height:0}
+.top .sbox:focus-within,.top .sbox:has(input:not(:placeholder-shown)){width:230px;box-shadow:0 0 0 2px var(--ac);background:#fff}
+.top .sbox:focus-within input,.top .sbox:has(input:not(:placeholder-shown)) input{width:100%}
+#addBtn{flex:none;border-radius:8px;box-shadow:none;background:var(--ac);border-color:var(--ac);color:#fff;min-height:38px;padding:0 16px}
+#addBtn:hover{background:var(--ac-d)}
+
+/* 3 · Superfícies: cartões com borda fina, sem sombra */
+main.wrap{padding-top:4px;padding-bottom:48px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);box-shadow:none;padding:20px;margin:12px 0}
+h2{font-size:26px;font-weight:800;letter-spacing:-.025em;margin:26px 0 4px;padding-bottom:10px;border-bottom:3px solid var(--ac);display:flex;width:100%}
+h2 .ic{color:var(--ac)}
+.card h3{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.card h3 .ic{color:var(--ac)}
+.sec{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ac-d);border-left:4px solid var(--ac);padding-left:10px;margin:26px 0 12px}
+.hero{background:#fff;border-top:4px solid var(--ac)}
+.hero .title{font-size:12px;font-weight:800;letter-spacing:.08em}
+.big{border-radius:var(--r-sm);font-weight:800;letter-spacing:-.04em}
+.big.rd{background:var(--rd-s)}.big.bl{background:var(--bl-s)}
+.split{height:12px}.split .sl,.split .sf{border-radius:0}.split .sl{border-radius:6px 0 0 6px}.split .sf{border-radius:0 6px 6px 0}
+.chip{border-radius:6px;box-shadow:none;background:#fff;border:1px solid var(--bd);font-weight:600}
+.chip.ac{background:var(--ac-s);border-color:transparent}
+.note{border-radius:var(--r-sm);background:var(--ac-s);color:var(--ac-d)}
+.mcstats div{background:var(--bg);border-radius:var(--r-sm)}
+.pbar span{border-radius:var(--r-sm)}
+.empty{border-radius:var(--r-sm);background:var(--bg)}
+.grid>*{border-radius:var(--r)}
+footer.foot{background:#fff;border-top:1px solid var(--bd)}
+
+/* 4 · Controles */
+.btn{border-radius:8px;min-height:38px;background:#fff;border:1px solid var(--bd);box-shadow:none;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--hov)}
+.btn.primary{background:var(--ac);border-color:var(--ac);color:#fff}.btn.primary:hover{background:var(--ac-d)}
+.btn.danger{color:var(--rd)}.btn.danger:hover{background:var(--rd-s);border-color:var(--rd-s)}
+input,select{border-radius:8px;min-height:38px;background-color:var(--hov);border:1px solid transparent}
+input:focus,select:focus{background-color:#fff;border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+input[type=checkbox]{min-height:0;accent-color:var(--ac)}
+.tools label.chk,label.chk{flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--tx)}
+.tools label.chk input,label.chk input{width:auto}
+.seg{display:inline-flex;gap:0}.seg .btn{border-radius:0;margin-left:-1px;min-height:38px;padding:0 14px}.seg .btn:first-child{border-radius:8px 0 0 8px;margin-left:0}.seg .btn:last-child{border-radius:0 8px 8px 0}
+.seg .btn:hover,.seg .btn:focus-visible{background:var(--ac-s);color:var(--ac-d);position:relative}
+dialog{border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+
+/* 5 · Tabelas */
+.scroll{-webkit-overflow-scrolling:touch}
+table{font-variant-numeric:tabular-nums}
+th{background:var(--hov);color:var(--mu);border-radius:0!important;border-bottom:1px solid var(--bd)}
+tbody tr:hover td{background:#faf9ff}
+.cmp td,.cmp th{white-space:nowrap}.cmp th,table.ed th{cursor:default}
+table.ed input,table.ed select{padding:5px 8px;min-width:84px;font-size:13px;min-height:32px}
+
+/* 6 · Componentes das páginas novas */
+.banner{display:flex;gap:10px;align-items:flex-start;background:#fff8e1;border:1px solid #f0d98a;border-left:4px solid #e0a800;color:#5c4300;border-radius:var(--r-sm);padding:12px 16px;margin:12px 0;font-size:14px}
+.fgrid.sim{margin-top:10px}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--mu)}.fld small{font-weight:400;font-size:12px}
+.prob{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.pc{border-radius:var(--r-sm);padding:16px 20px;display:flex;flex-direction:column;gap:2px;border-left:5px solid currentColor}
+.pc.rd{background:var(--rd-s);color:var(--rd)}.pc.bl{background:var(--bl-s);color:var(--bl)}
+.pc b{font-size:46px;font-weight:800;letter-spacing:-.04em;line-height:1.05}
+.pc small{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.06em}.pc span{font-size:12px;color:var(--mu)}
+svg.lc{width:100%;height:auto;display:block;touch-action:pan-y}svg.lc text{fill:var(--mu);font-size:11px}
+.xtip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.14);z-index:3;min-width:160px}
+.xtip i,.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.xtip small{color:var(--mu)}
+.sclist{display:grid;gap:8px;margin-top:10px}
+.sc{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;border:1px solid var(--bd);border-radius:var(--r-sm);padding:10px 14px;background:#fff}
+.sc small{color:var(--mu);flex:1 1 220px}.sc .btn{padding:0 12px;font-size:13px;min-height:32px}
+.tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fff1cc;color:#7a5200}.tag.real{background:var(--ok-s);color:var(--ok)}
+tr.base td{background:var(--hov)}
+.dbar{display:inline-block;position:relative;width:90px;height:8px;background:var(--bg);border-radius:2px;vertical-align:middle}.dbar i{position:absolute;top:0;bottom:0;border-radius:2px}
+h4{margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mu)}
+[data-page]:not([hidden]){animation:pgin .2s ease both}
+@keyframes pgin{from{opacity:0}to{opacity:1}}
+
+/* 7 · Skeleton screens */
+.sk{display:block;border-radius:6px;background:linear-gradient(90deg,#e4e6eb 25%,#f2f3f5 50%,#e4e6eb 75%);background-size:200% 100%;animation:shimmer 1.3s linear infinite}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.sk-line{height:14px;margin:10px 0}.sk-line.s{width:40%}.sk-line.m{width:65%}
+.sk-title{height:18px;width:55%;margin-bottom:16px}
+.sk-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0}
+.sk-box{height:112px;border-radius:8px}.sk-chart{height:300px;border-radius:8px;margin-top:8px}.sk-bar{height:12px;margin:8px 0}
+.sk-wrap{pointer-events:none}
+
+/* 8 · Celular: barra de abas inferior (padrão de apps), cabeçalho compacto, tudo empilhado */
+@media(max-width:760px){
+  body{padding-bottom:calc(60px + var(--safe-b))}
+  .wrap{padding:0 12px}
+  .bar{min-height:52px;gap:8px}
+  .burger{display:none}
+  .logo{font-size:15px;margin-right:0}.mark{width:30px;height:30px}
+  .top .sbox{flex:0 0 40px;margin-left:auto}
+  .top .sbox:focus-within,.top .sbox:has(input:not(:placeholder-shown)){position:absolute;left:12px;right:60px;width:auto;z-index:5;height:40px}
+  #addBtn{width:40px;height:40px;min-height:40px;padding:0;justify-content:center;font-size:0;gap:0}#addBtn .ic{width:22px;height:22px}
+  .top nav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;height:auto;align-self:auto;flex-direction:row;background:#fff;border-top:1px solid var(--bd);padding:0 0 var(--safe-b);overflow-x:auto}
+  .top nav a{flex:1 0 64px;flex-direction:column;justify-content:center;gap:2px;height:56px;padding:4px;border-bottom:0;border-top:3px solid transparent;font-size:10.5px;text-align:center}
+  .top nav a .ic{display:block;width:22px;height:22px}
+  .top nav a.on{border-top-color:var(--ac);border-bottom:0;background:transparent}
+  h2{font-size:22px;margin-top:18px}
+  .card{padding:14px;margin:10px 0}
+  .tools{gap:10px}.tools label{flex:1 1 calc(50% - 10px);min-width:130px}.tools select,.tools input{width:100%}
+  .tools .seg{flex:1 1 100%}.tools .seg .btn{flex:1;justify-content:center}.tools>.btn{flex:1 1 auto;justify-content:center}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-12px;padding-right:12px}.chips::-webkit-scrollbar{display:none}.chip{flex:none}
+  .hero .chips{flex-wrap:wrap;overflow:visible;margin-right:0;padding-right:0}
+  .hero{padding:16px}
+  .hero .nums{grid-template-columns:1fr 1fr}.hero .nums .big:last-child{grid-column:1/-1}
+  .big{font-size:38px;padding:14px 16px}
+  .fgrid{grid-template-columns:1fr}.fgrid.sim{grid-template-columns:1fr 1fr}
+  .mcstats{grid-template-columns:1fr 1fr}
+  .pbar{height:42px;font-size:13px}
+  .row .btn{flex:1 1 auto;justify-content:center}
+  .sc{flex-direction:column;align-items:stretch}.sc span{display:flex;gap:8px}.sc span .btn{flex:1;justify-content:center}
+  dialog{width:100vw;max-width:100vw;margin:auto 0 0;border-radius:12px 12px 0 0;padding:18px 14px calc(18px + var(--safe-b))}
+  .xtip{min-width:130px;font-size:12px}
+  .foot .wrap{flex-direction:column;gap:6px}
+}
+@media(max-width:420px){.fgrid.sim{grid-template-columns:1fr}.prob{grid-template-columns:1fr}.pc b{font-size:38px}.sk-chart{height:220px}.tools label{flex-basis:100%}}
+@media(min-width:761px) and (max-width:1000px){.hero .nums{grid-template-columns:1fr 1fr}}
+
+/* 9 · Acessibilidade e movimento */
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media print{.top nav,#addBtn{display:none!important}body{padding:0}}
+
+/* Extras */
+.skip{position:absolute;left:-9999px;top:8px;background:var(--ac);color:#fff;padding:8px 14px;border-radius:8px;z-index:100;font-weight:600}.skip:focus{left:12px}
+main:focus{outline:0}
+@media(min-width:761px) and (max-width:1100px){.top nav a{padding:0 9px;font-size:13px}.logo b{font-size:15px}}
+
+/* 10 · Monte Carlo v2: progresso, decomposição, matriz de debates e filtros (mesma linguagem flat: borda fina, sem sombra) */
+.mcprog{height:6px;border-radius:3px;background:var(--hov);overflow:hidden;margin:8px 0 0}
+.mcprog i{display:block;height:100%;width:6%;background:var(--ac);border-radius:3px;transition:width .25s}
+.vbar{display:inline-block;width:120px;height:8px;border-radius:2px;background:var(--bg);vertical-align:middle;margin-right:8px;overflow:hidden}
+.vbar i{display:block;height:100%;background:var(--ac)}
+.grpbox{display:flex;flex-wrap:wrap;gap:8px 18px;margin:6px 0 14px}
+table.mx{width:100%;border-collapse:collapse;text-align:center}
+table.mx th{font-size:12px;white-space:nowrap}
+table.mx td.heat{border:1px solid var(--bd);padding:12px 8px;font-size:15px}
+table.mx td.heat.hl{background:rgba(214,51,74,var(--a))}
+table.mx td.heat.hf{background:rgba(31,95,214,var(--a))}
+table.mx tbody tr:hover td.heat{background-color:inherit}
+.tools select{max-width:100%}
+.card .dot{width:8px;height:8px}
+@media(max-width:760px){.grpbox{gap:6px 14px}.vbar{width:70px}table.mx td.heat{padding:10px 4px;font-size:13px}}
